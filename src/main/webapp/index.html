@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+<link rel="stylesheet"
+	href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
+<script
+	src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.0/jquery.min.js"></script>
+<script
+	src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/js/bootstrap.min.js"></script>
+<title>Springfield Reimbursements</title>
+</head>
+
+<body>
+    <nav class="navbar navbar-inverse">
+        <div class="container-fluid">
+            <div class="navbar-header">
+            	<span class="navbar-brand">Springfield Reimbursements</span>
+            </div>
+            <ul class="nav navbar-nav">
+            <li><a href="#" onclick="showLogin()">Log out</a></li>
+            <li><a href="#" onclick="showCreateReimbursement()" id="create_nav" style="display:none;">Create Reimbursement</a></li>
+            <li><a href="#" onclick="showReimbursements()" id="reim_nav" style="display:none;">View Reimbursements</a></li>
+             <li><a href="#" id="active_user" style="display:none;"></a></li>
+            </ul>
+        </div>
+    </nav>
+	<div class="container">
+		<div class="row" id="loginSection">
+			<div class="col-sm-4"></div>
+			<div class="col-sm-4" style="margin-top: 20px;">
+				<div class="panel panel-primary">
+					<div class="panel-heading">Log In</div>
+					<div class="panel-body">
+						<strong>User Name<br /></strong> <input type="text"
+							style="margin-bottom: 5px;" class="form-control" id="usern" /> <strong>Password<br /></strong>
+						<input type="text" class="form-control" style="margin-top: 5px;"
+							id="passw" />
+						<button type="button" class="btn btn-primary"
+							style="margin-top: 5px; float: right;" onclick="sendLoginInfo()">Submit</button>
+					</div>
+				</div>
+			</div>
+			<div class="col-sm-4"></div>
+		</div>
+		
+	<div class="container">
+		<div class="row" id="employeeReimbursementSection" style="display: none; margin-top: 20px;">
+			<div class="col-sm-2"></div>
+			<div class="col-sm-8" style="margin-top: 20px;">
+				<div class="panel panel-primary">
+					<div class="panel-heading">Reimbursements</div>
+					<div class="panel-body">
+						<table class="table table-responsive" id="employee_reim">
+							<thead>
+								<tr>
+									<th>Id</th>
+									<th>User</th>
+									<th>Amount</th>
+									<th>Status</th>
+									<th>Description</th>
+									<th>Timestamp</th>
+								</tr>
+							</thead>
+							<tbody id="reim_table_body">
+
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+			<div class="col-sm-2"></div>
+		</div>
+	</div>
+
+	<div class="row" id="reimbursementCreationSection" style="display: none;">
+		<div class="col-sm-2"></div>
+		<div class="col-sm-8" style="margin-top: 20px;">
+			<div class="panel panel-primary">
+				<div class="panel-heading">Create a new Reimbursement Request</div>
+				<div class="panel-body">
+					<div class="form-group">
+					  <label for="amount">Enter the amount you wish to be reimbursed:</label>
+					  <input type="text" class="form-control" id="amount">
+					</div>
+					<div class="form-group">
+					  <label for="reason">Enter the reason for your expenditure:</label>
+					  <input type="text" class="form-control" id="reason">
+					</div>					
+					<button type="button" class="btn btn-primary"
+						style="margin-top: 5px; float: right;" onclick="submitReimRequest()">Submit</button>
+				</div>
+			</div>
+		</div>
+		<div class="col-sm-2"></div>		
+	</div>		
+		
+    <div class="container">
+		<div class="row" id="managerSection" style="display: none;">
+			<div class="col-sm-2"></div>
+			<div class="col-sm-8" style="margin-top: 20px;">
+				<div class="panel panel-primary">
+					<div class="panel-heading">Reimbursement Management</div>
+					<div class="panel-body">
+						<table class="table table-responsive" id="manager_reim">
+							<thead>
+								<tr>
+									<th>Id</th>
+									<th>User</th>
+									<th>Amount</th>
+									<th>Status</th>
+									<th>Description</th>
+									<th>Timestamp</th>
+									<th>Approve</th>
+									<th>Deny</th>
+								</tr>
+							</thead>
+							<tbody id="management_table_body">
+
+							</tbody>
+						</table>
+					</div>
+				</div>
+            </div>
+        </div>
+			<div class="col-sm-2"></div>
+		</div>
+	</div>
+
+	<script>
+		const MANAGER_SECTION_ID = "managerSection";
+		const EXPENSES_SECTION_ID = "employeeReimbursementSection";
+
+		current_user = null;
+		is_manager = null;
+		
+		function clearLoginForm() {
+			document.getElementById("usern").value = "";
+			document.getElementById("passw").value = "";
+		}
+
+		function hideLoginForm() {
+			clearLoginForm();
+			document.getElementById("loginSection").style.display = 'none';
+		}
+
+		function showManagerSection() {
+            console.log("showing manager section");
+			document.getElementById("managerSection").setAttribute("style", "display:block");
+			let xhttp = new XMLHttpRequest();
+			xhttp.onreadystatechange = function() {
+				if (this.readyState == 4) {
+                    let responseData = JSON.parse(this.responseText);
+                    console.log(responseData);
+					switch (this.status) {
+                    case 200:
+                    	document.getElementById("management_table_body").innerHTML = "";
+                        let reimbursements = '';
+						$.each(responseData, function(key, value){
+							reimbursements += '<tr>';
+							reimbursements += '<td>' + value.id + '</td>';
+							reimbursements += '<td>' + value.username + '</td>';	//this needs to be comments, so add to json and change
+							reimbursements += '<td>' + value.amount + '</td>';
+							reimbursements += '<td>' + value.status + '</td>';
+							reimbursements += '<td>' + value.description + '</td>';
+							reimbursements += '<td>' + value.timestamp + '</td>';
+                            reimbursements += '<td align="center"><a href="#" onclick="approve(' + value.id + ')"><span class="glyphicon glyphicon-ok"></span></a></td>';
+                            reimbursements += '<td align="center"><a href="#" onclick="deny(' + value.id + ')"><span class="glyphicon glyphicon-remove"></span></a></td>';
+                            reimbursements += '</tr>';
+						});
+						$('#manager_reim').append(reimbursements);						
+						document.getElementById(MANAGER_SECTION_ID)
+								.setAttribute("style", "display:block");
+						break;
+					default:
+						alert("something went wrong with showing manager section");
+					}
+				}
+            }
+			xhttp.open("post", "http://localhost:8080/Project1/Manager", true);
+			xhttp.setRequestHeader('Content-Type',
+					'application/x-www-form-urlencoded');
+			xhttp.send('action=' + encodeURIComponent('load') + '&username=' + encodeURIComponent(current_user));	
+		}
+		
+		function submitReimRequest() {			
+			
+			let amount = document.getElementById("amount").value;
+			let description = document.getElementById("reason").value;
+			let xhttp = new XMLHttpRequest();
+			xhttp.onreadystatechange = function() {
+				if (this.readyState == 4) {
+                    let responseData = JSON.parse(this.responseText);
+					switch (this.status) {
+                    case 200:
+                    	alert("Reimbursement request submitted.");
+						break;
+					default:
+						alert("Something went wrong with showing reimbursement creation section");
+					}
+				}
+            }
+			xhttp.open("post", "http://localhost:8080/Project1/Reimbursement", true);
+			xhttp.setRequestHeader('Content-Type',
+					'application/x-www-form-urlencoded');
+			xhttp.send('action=' + encodeURIComponent('create') + '&username=' + encodeURIComponent(current_user)
+					+ '&amount=' + encodeURIComponent(amount) + '&description=' + encodeURIComponent(description));				
+		}
+		
+		function showCreateReimbursement() {
+			document.getElementById("managerSection").setAttribute("style", "display:none");
+			document.getElementById("loginSection").setAttribute("style", "display:none");
+			document.getElementById("employeeReimbursementSection").setAttribute("style", "display:none");
+			document.getElementById("reimbursementCreationSection").setAttribute("style", "display:block");
+
+		}
+		
+		function showReimbursements() {
+			document.getElementById("managerSection").setAttribute("style", "display:none");
+			document.getElementById("loginSection").setAttribute("style", "display:none");
+			document.getElementById("reimbursementCreationSection").setAttribute("style", "display:none");	
+			document.getElementById("employeeReimbursementSection").setAttribute("style", "display:block");
+			showExpenses();
+		}
+	
+		//update the database and reload the table
+		function approve(id) {
+			let xhttp = new XMLHttpRequest();
+			xhttp.onreadystatechange = function() {
+				if (this.readyState == 4) {
+					//let responseData = JSON.parse(this.responseText);
+					// console.log(responseText);
+					switch (this.status) {
+					case 200:
+						alert("Request approved!");
+						showManagerSection();
+						document.getElementById(MANAGER_SECTION_ID)
+								.setAttribute("style", "display:block;");
+						break;
+					default:
+						alert("something went wrong with the request approval");
+					}
+				}
+			}	
+			xhttp.open("post", "http://localhost:8080/Project1/Manager", true);
+			xhttp.setRequestHeader('Content-Type',
+					'application/x-www-form-urlencoded');
+			xhttp.send('action='+ encodeURIComponent('approve') + '&username=' 
+					+ encodeURIComponent(current_user) + '&id=' + id);	
+		}
+		
+		function deny(id) {
+			let xhttp = new XMLHttpRequest();
+			xhttp.onreadystatechange = function() {
+				if (this.readyState == 4) {
+					//let responseData = JSON.parse(this.responseText);
+					// console.log(responseText);
+					switch (this.status) {
+					case 200:
+						alert("Request denied.");
+						showManagerSection();
+						document.getElementById(MANAGER_SECTION_ID)
+								.setAttribute("style", "display:block;");
+						break;
+					default:
+						alert("Something went wrong with the request denial.");
+					}
+				}
+			}	
+			xhttp.open("post", "http://localhost:8080/Project1/Manager", true);
+			xhttp.setRequestHeader('Content-Type',
+					'application/x-www-form-urlencoded');
+			xhttp.send('action='+ encodeURIComponent('deny') + '&username=' 
+					+ encodeURIComponent(current_user) + '&id=' + id);				
+		}
+		
+		function hideManagerSection() {
+			console.log("hiding manager section");
+			let xhttp = new XMLHttpRequest();
+			xhttp.onreadystatechange = function() {
+				if (this.readyState == 4) {
+					let responseData = JSON.parse(this.responseText);
+					switch (this.status) {
+					case 200:
+						// loadManagerDataFromExpenseServlet(); setManagerDataForDisplay();
+						document.getElementById(MANAGER_SECTION_ID)
+								.setAttribute("style", "display:none;");
+						break;
+					default:
+						alert("something went wrong with hiding manager section");
+					}
+				}
+			}			
+		}
+
+		function showExpenses() {
+			document.getElementById("employeeReimbursementSection").setAttribute("style", "display:block");
+
+			let xhttp = new XMLHttpRequest();
+			xhttp.onreadystatechange = function() {
+				if (this.readyState == 4) {
+					let responseData = JSON.parse(this.responseText);
+					switch (this.status) {
+					case 200:
+						document.getElementById("reim_table_body").innerHTML = "";
+						let reimbursements = '';							
+						$.each(responseData, function(key, value){
+							reimbursements += '<tr>';
+							reimbursements += '<td>' + value.id + '</td>';
+							reimbursements += '<td>' + value.username + '</td>';
+							reimbursements += '<td>' + value.amount + '</td>';
+							reimbursements += '<td>' + value.status + '</td>';
+							reimbursements += '<td>' + value.description + '</td>';
+                            reimbursements += '<td>' + value.timestamp + '</td>';
+                            reimbursements += '</tr>';
+						});
+						$('#employee_reim').append(reimbursements);
+						document.getElementById("employeeReimbursementSection").setAttribute("style", "display:block");
+						break;
+					default:
+						alert("something went wrong with showing expenses");
+					}
+				}
+			}
+			xhttp.open("post", "http://localhost:8080/Project1/Reimbursement", true);
+			xhttp.setRequestHeader('Content-Type',
+					'application/x-www-form-urlencoded');
+			xhttp.send('username=' + encodeURIComponent(current_user) + '&action=' + encodeURIComponent('load'));			
+		}
+		
+		function hideExpenses() {
+			document.getElementById(EXPENSES_SECTION_ID).setAttribute("style", "display:none");		
+		}
+		
+		function showLogin() {
+			current_user = null;
+			is_manager = null;
+			
+			document.getElementById("create_nav").setAttribute("style", "display:none");
+			document.getElementById("reim_nav").setAttribute("style", "display:none");	
+			document.getElementById("managerSection").setAttribute("style", "display:none");
+			document.getElementById("employeeReimbursementSection").setAttribute("style", "display:none");
+			document.getElementById("reimbursementCreationSection").setAttribute("style", "display:none");
+			document.getElementById("loginSection").setAttribute("style", "display:block");			
+		}
+		
+		function sendLoginInfo() {
+			let xhttp = new XMLHttpRequest();
+			xhttp.onreadystatechange = function() {
+				if (this.readyState == 4) {
+					let responseData = JSON.parse(this.responseText);
+					console.log(responseData);
+					switch (this.status) {
+					case 200:
+						console.log("status code "+this.status);
+						hideLoginForm();
+						current_user = responseData.current_user;
+						is_manager = responseData.is_manager;
+						if (is_manager) {
+							console.log("is_manager:" + is_manager);
+							hideExpenses(); // clearExpensesDataDisplay();
+							showManagerSection();
+						} else {
+							console.log("not a manager");
+							document.getElementById("create_nav").setAttribute("style", "display:block");
+							document.getElementById("reim_nav").setAttribute("style", "display:block");
+							hideManagerSection(); // clearManagerDataDisplay();
+							showExpenses();
+						}
+						document.getElementById("active_user").innerHTML = current_user;
+						break;
+					case 401:// else clear the login form
+						alert(responseData.errorMessage);
+						clearLoginForm();
+						break;
+					}
+				}
+			}
+
+			let un = document.getElementById("usern").value;
+			let pw = document.getElementById("passw").value;
+
+			xhttp.open("post", "http://localhost:8080/Project1/Login", true);
+			xhttp.setRequestHeader('Content-Type',
+					'application/x-www-form-urlencoded');
+			xhttp.send('username=' + encodeURIComponent(un) + '&password='
+					+ encodeURIComponent(pw));
+		}
+
+	</script>
+
+</body>
+
+</html>
